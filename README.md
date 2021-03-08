@@ -1,4 +1,4 @@
-## Laboratorio 1. Inversión de Capital
+## Laboratorio 3. Behavioral Finance
 
 ### Abtract
 
