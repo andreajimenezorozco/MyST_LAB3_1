@@ -1,12 +1,34 @@
 
 """
 # -- --------------------------------------------------------------------------------------------------- -- #
-# -- project: A SHORT DESCRIPTION OF THE PROJECT                                                         -- #
+# -- project: Develop tools for analyzing the performance of trading activity                            -- #
 # -- script: data.py : python script for data collection                                                 -- #
-# -- author: YOUR GITHUB USER NAME                                                                       -- #
+# -- author: andreajimenezorozco, jofefloga                                                              -- #
 # -- license: GPL-3.0 License                                                                            -- #
-# -- repository: YOUR REPOSITORY URL                                                                     -- #
+# -- repository: https://github.com/andreajimenezorozco/MyST_LAB3_1                                      -- #
 # -- --------------------------------------------------------------------------------------------------- -- #
 """
 
-dict_test = {'key_a': 'a', 'key_b': 'b'}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

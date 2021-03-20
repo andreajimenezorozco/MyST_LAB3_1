@@ -1,10 +1,34 @@
 
 """
 # -- --------------------------------------------------------------------------------------------------- -- #
-# -- project: A SHORT DESCRIPTION OF THE PROJECT                                                         -- #
+# -- project: Develop tools for analyzing the performance of trading activity                            -- #
 # -- script: visualizations.py : python script with data visualization functions                         -- #
-# -- author: YOUR GITHUB USER NAME                                                                       -- #
+# -- author: andreajimenezorozco, jofefloga                                                              -- #
 # -- license: GPL-3.0 License                                                                            -- #
-# -- repository: YOUR REPOSITORY URL                                                                     -- #
+# -- repository: https://github.com/andreajimenezorozco/MyST_LAB3_1                                      -- #
 # -- --------------------------------------------------------------------------------------------------- -- #
 """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

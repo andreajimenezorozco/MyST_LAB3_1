@@ -1,48 +1,59 @@
 
 """
 # -- --------------------------------------------------------------------------------------------------- -- #
-# -- project: A SHORT DESCRIPTION OF THE PROJECT                                                         -- #
+# -- project: Develop tools for analyzing the performance of trading activity                            -- #
 # -- script: main.py : python script with the main functionality                                         -- #
-# -- author: YOUR GITHUB USER NAME                                                                       -- #
+# -- author: andreajimenezorozco, jofefloga                                                              -- #
 # -- license: GPL-3.0 License                                                                            -- #
-# -- repository: YOUR REPOSITORY URL                                                                     -- #
+# -- repository: https://github.com/andreajimenezorozco/MyST_LAB3_1                                      -- #
 # -- --------------------------------------------------------------------------------------------------- -- #
 """
 
-import pandas as pd
-import data as dt
+#%% Libraries
+from functions import *
 
-# -- TEST 1 : 
-# verify that the script is being read
-print(dt.dict_test)
+#%% Part1
 
-# -- TEST 2 :
-# verify that installed pandas module works correctly
-df_dict_test = pd.DataFrame(dt.dict_test, index=[0, 1])
-print(df_dict_test)
+#Read historic
+data = f_leer_archivo()
 
-# -- TEST 3 :
-# verify you can use plotly and visualize plots in jupyter notebook
+#Pip size example
+USDJPY_pipsize = f_pip_size('USDJPY')
 
-import chart_studio.plotly as py   # various tools (jupyter offline print)
-import plotly.graph_objects as go  # plotting engine
+#Adding time columns
+data2 = f_columnas_tiempos(data)
 
-# example data
-df = pd.DataFrame({'column_a': [1, 2, 3, 4, 5], 'column_b': [1, 2, 3, 4, 5]})
-# basic plotly plot
-data = [go.Bar(x=df['column_a'], y=df['column_b'])]
-# instruction to view it inside jupyter
-py.iplot(data, filename='jupyter-basic_bar')
-# (alternatively) instruction to view it in web app of plotly
-# py.plot(data)
+#Adding pips columns
+data3 = f_columnas_pips(data2)
 
-# -- TEST 4 :
-# verify you can use plotly and visualize plots in web browser locally
+#Getting a dict with 
+data4 = f_estadisticas_ba(data3)
+df1 = data4.get('df_1_tabla')
+df2 = data4.get('df_2_ranking')
 
-import plotly.io as pio            # to define input-output of plots
-pio.renderers.default = "browser"  # to render the plot locally in your default web browser
+#%% Full Aanalysis Part1
+data, data2, data3, data4, df1, df2 = Full_Part1()
 
-# basic plotly plot
-plot_data = go.Figure(go.Bar(x=df['column_a'], y=df['column_b']))
-# instruction to view it in specified render (in this case browser)
-plot_data.show()
+#%% Part2
+
+#%% Part3
+
+#%%Part4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
