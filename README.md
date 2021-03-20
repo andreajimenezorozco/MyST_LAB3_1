@@ -1,6 +1,6 @@
 # Laboratorio 3. Behavioral Finance
 
-## Abtract
+## Abstract
 
 
 ## Objetivos
