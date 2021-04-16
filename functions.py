@@ -179,14 +179,192 @@ def Full_Part1():
         return data, data2, data3, data4, df1, df2
     else:
         return 0,0,0,0,0,0
+
 #%% Functions Part2
 
+def f_evolucion_capital(param_data):
+    param_data['close_time'] = [i.strftime('%Y-%m-%d') for i in param_data['close_time']]
+    param_data['close_time_'] = pd.to_datetime(param_data['close_time'])
+    df = pd.DataFrame({'close_time_':pd.date_range(start='2/19/2021', end='3/5/2021')})
+    df = pd.merge(df,param_data.loc[:,('close_time_','Profit')],how='left',on='close_time_')
+    df = df.fillna(0)
+    df = df.set_index('close_time_')
+    df= df.resample('D').sum()
+    df["profit_acm_d"] = df["Profit"].cumsum()
+    df["cap_acum"] = df["profit_acm_d"]+1000000
+    return df
 
+
+def f_estadisticas_mad(rf, df):
+    # Sharpe Original
+    rp = np.log(df.cap_acum) - np.log(df.cap_acum.shift(1))
+    rp = rp.fillna(0)
+    sdp = rp.std()
+    rp_mean = rp.mean()
+    rf = (rf / 252)
+    sharpe_original = (rp_mean - rf) / sdp
+
+    # Sharpe Ratio Actualizado
+    path = 'files'
+    file = glob.glob(os.path.join(path, "*.csv"))
+    benchmark = pd.read_csv(file[0])
+    benchmark = benchmark["Close"]
+    rp_benchmark = np.log(benchmark) - np.log(benchmark.shift(1))
+    rp_benchmark = rp_benchmark.fillna(0)
+    rp = rp.reset_index()
+    rp_rb = rp.join(rp_benchmark)
+    rp_rb['Rp-Rb'] = rp_rb['cap_acum'] - rp_rb['Close']
+    std_sra = rp_rb['Rp-Rb'].std()
+    r_trader = rp_rb['cap_acum'].mean()
+    r_benchmark = rp_rb['Close'].mean()
+    sharpe_actualizado = (r_trader - r_benchmark) / std_sra
+
+    min_ = df.cap_acum.min()
+    max_ = df.cap_acum.max()
+
+    # Drawdown
+    drawdown_cap = max_ - min_
+    date_drawdown = (df.loc[df.cap_acum == max_].index.values[0])
+    date_drawdown = np.datetime_as_string(date_drawdown, unit='D')
+
+    # DrawUp
+    drawup_cap = min_ - max_
+    date_drawup = np.datetime_as_string(df.loc[df.cap_acum == min_].index.values[0], unit='D')
+
+    data = [
+        ['sharpe_original', 'Cantidad', sharpe_original, "Sharpe Ratio Fórmula Original"],
+        ['sharpe_actualizado', 'Cantidad', sharpe_actualizado, "Sharpe Ratio Fórmula Actualizado"],
+        ['drawdown_capi', 'Fecha Final', drawdown_cap, "Máxima pérdida flotante registrada"],
+        ['drawup_capi', 'Fecha Final', drawup_cap, "Máxima ganancia flotante registrada"],
+        ['drawdown_capi', 'Fecha Inicial', date_drawdown, "Fecha inicial del DrawDown de Capital"],
+        ['drawdown_capi', 'Fecha Final', date_drawdown, "Fecha final del DrawDown de Capital"],
+        ['drawup_capi', 'Fecha Inicial', date_drawup, "Fecha inicial del DrawUp de Capital"],
+        ['drawup_capi', 'Fecha Final', date_drawup, "Fecha final del DrawUp de Capital"]]
+
+    df = pd.DataFrame(data, columns=['metrica', ' ', 'Valor', 'Descripción'])
+
+    return df
+
+def f_columnas_pips_v2(param_data):
+    param_data['float_pips'] = [(param_data['float_price'].iloc[i]-param_data['Price'].iloc[i])*f_pip_size(param_data['Symbol'].iloc[i])
+                              if param_data['Type'].iloc[i]=='buy'
+                              else (param_data['Price'].iloc[i]-param_data['float_price'].iloc[i])*f_pip_size(param_data['Symbol'].iloc[i])
+                              for i in range(len(param_data))]
+    return param_data
 
 #%% Functions Part3
 
+def f_be_de_parte1(param_data):
+    # Filtrado de operaciones ganadoras (operaciones ancla)
+    param_data['capital_acm'] = param_data['profit_acm'] + 100000
+    ganadoras = param_data[param_data.Profit > 0]
+    ganadoras = ganadoras.reset_index(drop=True)
+    ganadoras["Ratio"] = (ganadoras["Profit"] / abs(ganadoras["profit_acm"]))
+    df_anclas = ganadoras.loc[:, ['close_time', "open_time", 'Type', "Symbol",
+                                  'Profit', "profit_acm", "capital_acm", "Ratio", "Time", "Time.1", "Price", "Volume"]]
+    df_anclas = df_anclas.reset_index(drop=True)
 
-    
+    # Criterio de selección de operaciones abiertas por cada ancla
+    ocurrencias = []
+    file_list = []
+    for x in df_anclas.index:
+        df = param_data[(param_data.open_time <= df_anclas["close_time"][x]) &
+                        (param_data.close_time > df_anclas["close_time"][x])].loc[:,
+             ['Type', 'Symbol', 'Volume', 'Profit', "Price", "pips"]]
+        df['close_time_ancla'] = pd.Timestamp(df_anclas['close_time'][x])
+        file_list.append(df)
+        ocurrencias.append(len(df))
+    all_df = pd.concat(file_list, ignore_index=True)
+
+    # Descarga de precios para cada operación abierta
+    float_price = []
+    if not mt5.initialize():
+        print("initialize() failed, error code =", mt5.last_error())
+        quit()
+    for i in range(len(all_df)):
+        utc_from = datetime(all_df['close_time_ancla'][i].year,
+                            all_df['close_time_ancla'][i].month,
+                            all_df['close_time_ancla'][i].day)
+        utc_to = utc_from + timedelta(1)
+        symbol = all_df['Symbol'][i]
+        ticks = mt5.copy_ticks_range(symbol, utc_from, utc_to, mt5.COPY_TICKS_ALL)
+        ticks_frame = pd.DataFrame(ticks)
+        ticks_frame['time'] = pd.to_datetime(ticks_frame['time'], unit='s')
+        tick_time = next(x for x in ticks_frame['time'] if x >= all_df['close_time_ancla'][i])
+        price = ticks_frame.loc[ticks_frame['time'] == tick_time]
+        if all_df["Type"][i] == "buy":
+            price = price["bid"].mean()
+        else:
+            price = price["ask"].mean()
+        float_price.append(price)
+        float_prices = pd.DataFrame(columns=['float_price'], data=float_price)
+
+    all_df = all_df.join(float_prices)
+
+    all_df = f_columnas_pips_v2(all_df)
+    all_df["float_P&L"] = (all_df["Profit"] / all_df["pips"]) * all_df["float_pips"]
+    all_df = all_df[all_df['float_P&L'] < 0].reset_index(drop=True)
+
+    return all_df, df_anclas
+
+def f_be_de_parte2(ocurrencias,df_anclas):
+
+    dict_ = {'ocurrencias':{'Cantidad':len(ocurrencias)}}
+    status_quo = []
+    aversion_perdida = []
+    for i in ocurrencias.index:
+        inst = df_anclas[df_anclas['close_time']==ocurrencias['close_time_ancla'][i]]
+        dict_['ocurrencias'][f'ocurrencia_{i+1}'] = {'timestamp':ocurrencias['close_time_ancla'][i],
+                                                   'operaciones':{
+                                                       'ganadoras':{'instrumento':inst['Symbol'].iloc[0],
+                                                                    'volumen':inst['Volume'].iloc[0],
+                                                                    'sentido':inst['Type'].iloc[0],
+                                                                    'profit_ganadora':round(inst['Profit'].iloc[0],2)},
+                                                       'perdedoras':{'instrumento':ocurrencias['Symbol'][i],
+                                                                    'volumen':ocurrencias['Volume'][i],
+                                                                    'sentido':ocurrencias['Type'][i],
+                                                                    'profit_perdedora':round(ocurrencias['float_P&L'][i],2)}
+                                                   },
+                                                   'ratio_cp_profit_acm':round(abs(ocurrencias['float_P&L'][i]/inst['profit_acm'].iloc[0]),2),
+                                                   'ratio_cg_profit_acm':round(abs(inst['Profit'].iloc[0]/inst['profit_acm'].iloc[0]),2),
+                                                   'ratio_cp_cg':round(abs(ocurrencias['float_P&L'][i]/inst['Profit'].iloc[0]),2)
+                                                  }
+        if abs(ocurrencias['float_P&L'][i]/inst['profit_acm'].iloc[0])<abs(inst['Profit'].iloc[0]/inst['profit_acm'].iloc[0]):
+            status_quo.append(1)
+        else:
+            status_quo.append(0)
+
+        if abs(ocurrencias['float_P&L'][i]/inst['Profit'].iloc[0])>2:
+            aversion_perdida.append(1)
+        else:
+            aversion_perdida.append(0)
+
+    sensibilidad_decreciente = 0
+    if df_anclas['profit_acm'].iloc[0]<df_anclas['profit_acm'].iloc[-1]:
+        sensibilidad_decreciente += 1
+
+    if df_anclas['Profit'].iloc[-1] > df_anclas['Profit'].iloc[0] and ocurrencias['float_P&L'].iloc[-1] > ocurrencias['float_P&L'].iloc[0]:
+        sensibilidad_decreciente += 1
+
+    ult_ocurrencia = len(ocurrencias)-1
+    if dict_['ocurrencias'][f'ocurrencia_{ult_ocurrencia}']['ratio_cp_cg'] > 2:
+        sensibilidad_decreciente += 1
+
+    if sensibilidad_decreciente >= 2:
+        sens_ans = 'Si'
+    else:
+        sens_ans = 'No'
+
+
+
+    dict_['resultados'] = {
+        'dataframe': pd.DataFrame({'ocurrencias':len(ocurrencias),
+                                   'status_quo':str(round(100*np.array(status_quo).mean(),2))+'%',
+                                   'aversion_perdida':str(round(100*np.array(aversion_perdida).mean(),2))+'%',
+                                   'sensibilidad_decreciente':[sens_ans]})
+    }
+    return dict_
+
 #%% Functions Part4
 
 
