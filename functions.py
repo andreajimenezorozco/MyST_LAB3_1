@@ -24,6 +24,12 @@ import pandas as pd
 import numpy as np
 import statistics
 
+import os
+import glob
+import datetime
+from datetime import timedelta
+from datetime import datetime
+
 
 #%% Functions Part1
 def f_leer_archivo():
@@ -179,19 +185,19 @@ def Full_Part1():
         return data, data2, data3, data4, df1, df2
     else:
         return 0,0,0,0,0,0
-
 #%% Functions Part2
 
 def f_evolucion_capital(param_data):
     param_data['close_time'] = [i.strftime('%Y-%m-%d') for i in param_data['close_time']]
     param_data['close_time_'] = pd.to_datetime(param_data['close_time'])
-    df = pd.DataFrame({'close_time_':pd.date_range(start='2/19/2021', end='3/5/2021')})
-    df = pd.merge(df,param_data.loc[:,('close_time_','Profit')],how='left',on='close_time_')
+    df = pd.DataFrame({'close_time_': pd.date_range(start='2/19/2021', end='3/5/2021')})
+    df = pd.merge(df, param_data.loc[:, ('close_time_', 'Profit')], how='left', on='close_time_')
     df = df.fillna(0)
     df = df.set_index('close_time_')
-    df= df.resample('D').sum()
+    df = df.resample('D').sum()
     df["profit_acm_d"] = df["Profit"].cumsum()
-    df["cap_acum"] = df["profit_acm_d"]+1000000
+    df["cap_acum"] = df["profit_acm_d"] + 1000000
+
     return df
 
 
@@ -223,9 +229,23 @@ def f_estadisticas_mad(rf, df):
     max_ = df.cap_acum.max()
 
     # Drawdown
-    drawdown_cap = max_ - min_
-    date_drawdown = (df.loc[df.cap_acum == max_].index.values[0])
+    drawdown_cap = df.profit_acm_d.min()
+    date_drawdown = (df.loc[df.profit_acm_d == drawdown_cap].index.values[0])
     date_drawdown = np.datetime_as_string(date_drawdown, unit='D')
+    temp = 0
+    peak = 0
+    dd = 0
+    b = df.profit_acm_d
+    for i in range(len(b)):
+        if b[i] > b[i - 1] and b[i] > peak:
+            peak = b[i]
+            temp = 0
+
+        elif b[i] < b[i - 1]:
+            temp = b[i]
+
+        if temp - peak < dd:
+            dd = peak - temp
 
     # DrawUp
     drawup_cap = min_ - max_
@@ -234,7 +254,7 @@ def f_estadisticas_mad(rf, df):
     data = [
         ['sharpe_original', 'Cantidad', sharpe_original, "Sharpe Ratio Fórmula Original"],
         ['sharpe_actualizado', 'Cantidad', sharpe_actualizado, "Sharpe Ratio Fórmula Actualizado"],
-        ['drawdown_capi', 'Fecha Final', drawdown_cap, "Máxima pérdida flotante registrada"],
+        ['drawdown_capi', 'Fecha Final', dd, "Máxima pérdida flotante registrada"],
         ['drawup_capi', 'Fecha Final', drawup_cap, "Máxima ganancia flotante registrada"],
         ['drawdown_capi', 'Fecha Inicial', date_drawdown, "Fecha inicial del DrawDown de Capital"],
         ['drawdown_capi', 'Fecha Final', date_drawdown, "Fecha final del DrawDown de Capital"],
@@ -245,6 +265,30 @@ def f_estadisticas_mad(rf, df):
 
     return df
 
+def draw(values, method):
+    nuevo, init, fin = [], [], []
+    value_list = values["profit_acm_d"].tolist()
+    for cont in range(0, len(value_list)):
+        param = value_list[cont]
+        rest_list = value_list[cont + 1:]
+        for elemento in rest_list:
+            if method == "down":
+                nuevo.append(param - elemento)
+                init.append(param)
+                fin.append(elemento)
+            if method == "up":
+                nuevo.append(elemento - param)
+                init.append(param)
+                fin.append(elemento)
+    x1 = max(nuevo)
+    ind = nuevo.index(x1)
+    x2 = values.index[values['profit_acm_d'] == init[ind]].tolist()[0]
+    x3 = values.index[values['profit_acm_d'] == fin[ind]].tolist()[0]
+    return x1, x2, x3
+
+
+#%% Functions Part3
+
 def f_columnas_pips_v2(param_data):
     param_data['float_pips'] = [(param_data['float_price'].iloc[i]-param_data['Price'].iloc[i])*f_pip_size(param_data['Symbol'].iloc[i])
                               if param_data['Type'].iloc[i]=='buy'
@@ -252,7 +296,6 @@ def f_columnas_pips_v2(param_data):
                               for i in range(len(param_data))]
     return param_data
 
-#%% Functions Part3
 
 def f_be_de_parte1(param_data):
     # Filtrado de operaciones ganadoras (operaciones ancla)
@@ -364,10 +407,6 @@ def f_be_de_parte2(ocurrencias,df_anclas):
                                    'sensibilidad_decreciente':[sens_ans]})
     }
     return dict_
-
-#%% Functions Part4
-
-
 
 
 
