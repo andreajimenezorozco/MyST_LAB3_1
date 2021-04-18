@@ -211,10 +211,10 @@ def f_estadisticas_mad(rf, df):
     sharpe_original = (rp_mean - rf) / sdp
 
     # Sharpe Ratio Actualizado
-    path = 'files'
-    file = glob.glob(os.path.join(path, "*.csv"))
-    benchmark = pd.read_csv(file[0])
-    benchmark = benchmark["Close"]
+    #path = 'files'
+    #file = glob.glob(os.path.join(path, "*.csv"))
+    benchmark = pd.read_csv('files/SP500.csv')['Close']
+    #benchmark = benchmark['Close']
     rp_benchmark = np.log(benchmark) - np.log(benchmark.shift(1))
     rp_benchmark = rp_benchmark.fillna(0)
     rp = rp.reset_index()
@@ -234,8 +234,22 @@ def f_estadisticas_mad(rf, df):
     date_drawdown = np.datetime_as_string(date_drawdown, unit='D')
     temp = 0
     peak = 0
-    dd = 0
+    du = 0
     b = df.profit_acm_d
+    for i in range(len(b)):
+        if b[i] < b[i - 1] and b[i] < peak:
+            peak = b[i]
+            temp = 0
+
+        elif b[i] > b[i - 1]:
+            temp = b[i]
+
+        if temp - peak > du:
+            du = temp - peak
+    # DrawUp
+    temp = 0
+    peak = 0
+    dd = 0
     for i in range(len(b)):
         if b[i] > b[i - 1] and b[i] > peak:
             peak = b[i]
@@ -245,10 +259,11 @@ def f_estadisticas_mad(rf, df):
             temp = b[i]
 
         if temp - peak < dd:
-            dd = peak - temp
-
-    # DrawUp
-    drawup_cap = min_ - max_
+            dd = temp - peak
+    
+    
+    
+    drawup_cap = du
     date_drawup = np.datetime_as_string(df.loc[df.cap_acum == min_].index.values[0], unit='D')
 
     data = [

@@ -46,9 +46,8 @@ mad = f_estadisticas_mad(0.001, df_capital)
 
 #df needed for diccionary
 ocurrencias, df_anclas = f_be_de_parte1(data3)
-
-#%%Part4
-
+diccionario = f_be_de_parte2(ocurrencias,df_anclas)
+df_resultados = diccionario['resultados']['dataframe']
 
 
 
